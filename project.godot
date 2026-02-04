@@ -12,6 +12,7 @@ config_version=5
 
 config/name="Новый игровой проект"
 config/features=PackedStringArray("4.6", "GL Compatibility")
+run/main_scene="res://Main.tscn"
 config/icon="res://icon.svg"
 
 [physics]
