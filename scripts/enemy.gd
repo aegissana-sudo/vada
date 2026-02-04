@@ -2,6 +2,8 @@ extends CharacterBody2D
 
 @export var speed := 80.0
 @export var max_health := 3
+@export var health_bar_size := Vector2(18.0, 3.0)
+@export var health_bar_offset := Vector2(-9.0, -14.0)
 
 var target: Node2D
 var _health := max_health
@@ -11,6 +13,7 @@ var _health := max_health
 
 func _ready() -> void:
     add_to_group("enemies")
+    update()
 
 func _physics_process(_delta: float) -> void:
     if target == null:
@@ -26,8 +29,22 @@ func _physics_process(_delta: float) -> void:
 
 func take_damage(amount: int) -> void:
     _health -= amount
+    update()
     if _health <= 0:
         queue_free()
+
+func _draw() -> void:
+    if max_health <= 0:
+        return
+
+    var ratio := clamp(float(_health) / float(max_health), 0.0, 1.0)
+    var background_rect := Rect2(health_bar_offset, health_bar_size)
+    var foreground_rect := Rect2(
+        health_bar_offset,
+        Vector2(health_bar_size.x * ratio, health_bar_size.y)
+    )
+    draw_rect(background_rect, Color(0.1, 0.1, 0.1, 0.8))
+    draw_rect(foreground_rect, Color(0.2, 0.9, 0.2, 0.9))
 
 func _ensure_sprite() -> Sprite2D:
     if has_node("Sprite2D"):
