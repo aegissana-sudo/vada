@@ -4,10 +4,15 @@ extends CharacterBody2D
 @export var shoot_interval := 0.4
 @export var bullet_speed := 380.0
 @export var bullet_damage := 1
+@export var max_health := 5
+@export var contact_damage := 1
+@export var contact_damage_interval := 0.4
 
 @onready var sprite: Sprite2D = $Sprite2D
 
 var _shoot_timer := 0.0
+var _contact_damage_timer := 0.0
+var _health := max_health
 var _bullet_script := preload("res://scripts/bullet.gd")
 
 func _ready() -> void:
@@ -27,6 +32,7 @@ func _physics_process(_delta: float) -> void:
 
     velocity = input_vector * speed
     move_and_slide()
+    _apply_contact_damage(_delta)
 
 func _process(delta: float) -> void:
     _shoot_timer -= delta
@@ -39,6 +45,24 @@ func _process(delta: float) -> void:
 
     _shoot_timer = shoot_interval
     _shoot_at(target)
+
+func take_damage(amount: int) -> void:
+    _health = max(_health - amount, 0)
+    if _health == 0:
+        queue_free()
+
+func _apply_contact_damage(delta: float) -> void:
+    _contact_damage_timer = max(_contact_damage_timer - delta, 0.0)
+    if _contact_damage_timer > 0.0:
+        return
+
+    for index in range(get_slide_collision_count()):
+        var collision := get_slide_collision(index)
+        var collider := collision.get_collider()
+        if collider != null and collider.is_in_group("enemies"):
+            take_damage(contact_damage)
+            _contact_damage_timer = contact_damage_interval
+            return
 
 func _find_nearest_enemy() -> Node2D:
     var enemies := get_tree().get_nodes_in_group("enemies")
