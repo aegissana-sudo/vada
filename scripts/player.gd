@@ -4,17 +4,22 @@ extends CharacterBody2D
 @export var shoot_interval := 0.4
 @export var bullet_speed := 380.0
 @export var bullet_damage := 1
+@export var max_health := 6
+@export var health_bar_size := Vector2(20.0, 4.0)
+@export var health_bar_offset := Vector2(-10.0, -18.0)
 
 @onready var sprite: Sprite2D = $Sprite2D
 
 var _shoot_timer := 0.0
 var _bullet_script := preload("res://scripts/bullet.gd")
+var _health := max_health
 
 func _ready() -> void:
     var image := Image.create(16, 16, false, Image.FORMAT_RGBA8)
     image.fill(Color(1.0, 0.85, 0.2))
     var texture := ImageTexture.create_from_image(image)
     sprite.texture = texture
+    update()
 
 func _physics_process(_delta: float) -> void:
     var input_vector := Vector2(
@@ -68,3 +73,20 @@ func _shoot_at(target: Node2D) -> void:
     bullet.speed = bullet_speed
     bullet.damage = bullet_damage
     get_parent().add_child(bullet)
+
+func take_damage(amount: int) -> void:
+    _health = max(_health - amount, 0)
+    update()
+
+func _draw() -> void:
+    if max_health <= 0:
+        return
+
+    var ratio := clamp(float(_health) / float(max_health), 0.0, 1.0)
+    var background_rect := Rect2(health_bar_offset, health_bar_size)
+    var foreground_rect := Rect2(
+        health_bar_offset,
+        Vector2(health_bar_size.x * ratio, health_bar_size.y)
+    )
+    draw_rect(background_rect, Color(0.1, 0.1, 0.1, 0.8))
+    draw_rect(foreground_rect, Color(0.2, 0.9, 0.2, 0.9))
