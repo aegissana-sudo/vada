@@ -2,11 +2,14 @@ extends CharacterBody2D
 
 @export var speed := 80.0
 @export var max_health := 3
+@export var contact_damage := 1
+@export var contact_damage_interval := 0.6
 @export var health_bar_size := Vector2(18.0, 3.0)
 @export var health_bar_offset := Vector2(-9.0, -14.0)
 
 var target: Node2D
 var _health := max_health
+var _contact_timer := 0.0
 
 @onready var sprite: Sprite2D = _ensure_sprite()
 @onready var collision: CollisionShape2D = _ensure_collision()
@@ -15,7 +18,8 @@ func _ready() -> void:
     add_to_group("enemies")
     queue_redraw()
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
+    _contact_timer = max(_contact_timer - delta, 0.0)
     if target == null:
         return
 
@@ -26,6 +30,19 @@ func _physics_process(_delta: float) -> void:
         velocity = Vector2.ZERO
 
     move_and_slide()
+    _apply_contact_damage()
+
+func _apply_contact_damage() -> void:
+    if _contact_timer > 0.0:
+        return
+
+    for index in range(get_slide_collision_count()):
+        var collision := get_slide_collision(index)
+        var collider := collision.get_collider()
+        if collider == target and collider.has_method("take_damage"):
+            collider.take_damage(contact_damage)
+            _contact_timer = contact_damage_interval
+            return
 
 func take_damage(amount: int) -> void:
     _health -= amount
