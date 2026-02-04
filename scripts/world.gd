@@ -1,0 +1,65 @@
+extends Node2D
+
+@export var tile_size := 16
+@export var chunk_size := 32
+@export var view_distance := 2
+
+@onready var tile_map: TileMap = $TileMap
+@onready var player: CharacterBody2D = $Player
+
+var noise := FastNoiseLite.new()
+var generated_chunks: Dictionary = {}
+var tileset_source_id := -1
+
+func _ready() -> void:
+    noise.seed = randi()
+    noise.frequency = 0.05
+    _setup_tileset()
+    _update_chunks()
+
+func _process(_delta: float) -> void:
+    _update_chunks()
+
+func _setup_tileset() -> void:
+    var tileset := TileSet.new()
+    var source := TileSetAtlasSource.new()
+    tileset_source_id = tileset.add_source(source)
+
+    var image := Image.create(tile_size * 2, tile_size, false, Image.FORMAT_RGBA8)
+    image.fill(Color(0.2, 0.6, 0.2))
+    image.fill_rect(Rect2i(tile_size, 0, tile_size, tile_size), Color(0.2, 0.4, 0.8))
+
+    var texture := ImageTexture.create_from_image(image)
+    source.texture = texture
+    source.texture_region_size = Vector2i(tile_size, tile_size)
+    source.create_tile(Vector2i(0, 0))
+    source.create_tile(Vector2i(1, 0))
+
+    tile_map.tile_set = tileset
+
+func _update_chunks() -> void:
+    var player_tile := Vector2i(
+        floor(player.global_position.x / tile_size),
+        floor(player.global_position.y / tile_size)
+    )
+    var player_chunk := Vector2i(
+        floor(float(player_tile.x) / chunk_size),
+        floor(float(player_tile.y) / chunk_size)
+    )
+
+    for x in range(player_chunk.x - view_distance, player_chunk.x + view_distance + 1):
+        for y in range(player_chunk.y - view_distance, player_chunk.y + view_distance + 1):
+            var chunk := Vector2i(x, y)
+            if not generated_chunks.has(chunk):
+                _generate_chunk(chunk)
+
+func _generate_chunk(chunk: Vector2i) -> void:
+    generated_chunks[chunk] = true
+    var start := chunk * chunk_size
+    for x in range(start.x, start.x + chunk_size):
+        for y in range(start.y, start.y + chunk_size):
+            var value := noise.get_noise_2d(float(x), float(y))
+            var atlas := Vector2i(0, 0)
+            if value < -0.1:
+                atlas = Vector2i(1, 0)
+            tile_map.set_cell(0, Vector2i(x, y), tileset_source_id, atlas)
