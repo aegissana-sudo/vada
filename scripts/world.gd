@@ -116,8 +116,7 @@ func _on_player_died() -> void:
             continue
         enemy.set_physics_process(false)
         enemy.set_process(false)
-        if enemy.has_variable("target"):
-            enemy.target = null
+        enemy.target = null
 
     game_over_menu.visible = true
 
