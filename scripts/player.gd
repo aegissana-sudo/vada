@@ -82,7 +82,7 @@ func _draw() -> void:
     if max_health <= 0:
         return
 
-    var ratio := clamp(float(_health) / float(max_health), 0.0, 1.0)
+    var ratio: float = clamp(float(_health) / float(max_health), 0.0, 1.0)
     var background_rect := Rect2(health_bar_offset, health_bar_size)
     var foreground_rect := Rect2(
         health_bar_offset,
