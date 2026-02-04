@@ -3,6 +3,9 @@ extends Node2D
 @export var tile_size := 16
 @export var chunk_size := 32
 @export var view_distance := 2
+@export var enemy_spawn_interval := 1.0
+@export var max_enemies := 12
+@export var enemy_spawn_radius := 260.0
 
 @onready var tile_map: TileMap = $TileMap
 @onready var player: CharacterBody2D = $Player
@@ -10,6 +13,8 @@ extends Node2D
 var noise := FastNoiseLite.new()
 var generated_chunks: Dictionary = {}
 var tileset_source_id := -1
+var _enemy_spawn_timer := 0.0
+var _enemy_script := preload("res://scripts/enemy.gd")
 
 func _ready() -> void:
     noise.seed = randi()
@@ -17,8 +22,9 @@ func _ready() -> void:
     _setup_tileset()
     _update_chunks()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
     _update_chunks()
+    _update_enemy_spawns(delta)
 
 func _setup_tileset() -> void:
     var tileset := TileSet.new()
@@ -63,3 +69,25 @@ func _generate_chunk(chunk: Vector2i) -> void:
             if value < -0.1:
                 atlas = Vector2i(1, 0)
             tile_map.set_cell(0, Vector2i(x, y), tileset_source_id, atlas)
+
+func _update_enemy_spawns(delta: float) -> void:
+    _enemy_spawn_timer -= delta
+    if _enemy_spawn_timer > 0.0:
+        return
+
+    var enemies := get_tree().get_nodes_in_group("enemies")
+    if enemies.size() >= max_enemies:
+        _enemy_spawn_timer = enemy_spawn_interval
+        return
+
+    _enemy_spawn_timer = enemy_spawn_interval
+    _spawn_enemy()
+
+func _spawn_enemy() -> void:
+    var enemy := CharacterBody2D.new()
+    enemy.set_script(_enemy_script)
+    var angle := randf() * TAU
+    var offset := Vector2(cos(angle), sin(angle)) * enemy_spawn_radius
+    enemy.global_position = player.global_position + offset
+    enemy.target = player
+    add_child(enemy)
