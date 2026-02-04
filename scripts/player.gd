@@ -19,7 +19,7 @@ func _ready() -> void:
     image.fill(Color(1.0, 0.85, 0.2))
     var texture := ImageTexture.create_from_image(image)
     sprite.texture = texture
-    update()
+    queue_redraw()
 
 func _physics_process(_delta: float) -> void:
     var input_vector := Vector2(
@@ -76,7 +76,7 @@ func _shoot_at(target: Node2D) -> void:
 
 func take_damage(amount: int) -> void:
     _health = max(_health - amount, 0)
-    update()
+    queue_redraw()
 
 func _draw() -> void:
     if max_health <= 0:

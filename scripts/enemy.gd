@@ -13,7 +13,7 @@ var _health := max_health
 
 func _ready() -> void:
     add_to_group("enemies")
-    update()
+    queue_redraw()
 
 func _physics_process(_delta: float) -> void:
     if target == null:
@@ -29,7 +29,7 @@ func _physics_process(_delta: float) -> void:
 
 func take_damage(amount: int) -> void:
     _health -= amount
-    update()
+    queue_redraw()
     if _health <= 0:
         queue_free()
 
