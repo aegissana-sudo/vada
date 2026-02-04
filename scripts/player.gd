@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+signal died
+
 @export var speed := 220.0
 @export var shoot_interval := 0.4
 @export var bullet_speed := 380.0
@@ -77,6 +79,8 @@ func _shoot_at(target: Node2D) -> void:
 func take_damage(amount: int) -> void:
     _health = max(_health - amount, 0)
     queue_redraw()
+    if _health <= 0:
+        died.emit()
 
 func _draw() -> void:
     if max_health <= 0:

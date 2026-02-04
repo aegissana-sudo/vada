@@ -9,20 +9,27 @@ extends Node2D
 
 @onready var tile_map: TileMap = $TileMap
 @onready var player: CharacterBody2D = $Player
+@onready var game_over_menu: Control = $CanvasLayer/GameOverMenu
+@onready var retry_button: Button = $CanvasLayer/GameOverMenu/CenterContainer/VBoxContainer/RetryButton
 
 var noise := FastNoiseLite.new()
 var generated_chunks: Dictionary = {}
 var tileset_source_id := -1
 var _enemy_spawn_timer := 0.0
 var _enemy_script := preload("res://scripts/enemy.gd")
+var _game_over := false
 
 func _ready() -> void:
     noise.seed = randi()
     noise.frequency = 0.05
     _setup_tileset()
     _update_chunks()
+    player.died.connect(_on_player_died)
+    retry_button.pressed.connect(_on_retry_button_pressed)
 
 func _process(delta: float) -> void:
+    if _game_over:
+        return
     _update_chunks()
     _update_enemy_spawns(delta)
 
@@ -91,3 +98,28 @@ func _spawn_enemy() -> void:
     enemy.global_position = player.global_position + offset
     enemy.target = player
     add_child(enemy)
+
+func _on_player_died() -> void:
+    if _game_over:
+        return
+
+    _game_over = true
+    player.set_physics_process(false)
+    player.set_process(false)
+    player.visible = false
+    if player.has_node("CollisionShape2D"):
+        var collider: CollisionShape2D = player.get_node("CollisionShape2D")
+        collider.disabled = true
+
+    for enemy in get_tree().get_nodes_in_group("enemies"):
+        if enemy == null:
+            continue
+        enemy.set_physics_process(false)
+        enemy.set_process(false)
+        if enemy.has_variable("target"):
+            enemy.target = null
+
+    game_over_menu.visible = true
+
+func _on_retry_button_pressed() -> void:
+    get_tree().reload_current_scene()
