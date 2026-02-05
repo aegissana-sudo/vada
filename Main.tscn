@@ -47,6 +47,16 @@ offset_bottom = 82.0
 text = "Убийства: 0"
 label_settings = SubResource("2")
 
+
+[node name="LevelLabel" type="Label" parent="CanvasLayer"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 80.0
+offset_right = 360.0
+offset_bottom = 116.0
+text = "Уровень: 1 (0/5 XP)"
+label_settings = SubResource("2")
+
 [node name="PauseButton" type="Button" parent="CanvasLayer"]
 visible = false
 layout_mode = 1
@@ -160,6 +170,54 @@ text = "Начать игру"
 [node name="ExitButton" type="Button" parent="CanvasLayer/MainMenu/CenterContainer/VBoxContainer"]
 layout_mode = 2
 text = "Выйти"
+
+
+[node name="LevelUpMenu" type="Control" parent="CanvasLayer"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="CenterContainer" type="CenterContainer" parent="CanvasLayer/LevelUpMenu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/LevelUpMenu/CenterContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(520, 0)
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="CanvasLayer/LevelUpMenu/CenterContainer/VBoxContainer"]
+layout_mode = 2
+text = "Новый уровень"
+horizontal_alignment = 1
+
+[node name="HintLabel" type="Label" parent="CanvasLayer/LevelUpMenu/CenterContainer/VBoxContainer"]
+layout_mode = 2
+text = "Выберите одно улучшение оружия"
+horizontal_alignment = 1
+
+[node name="Option1Button" type="Button" parent="CanvasLayer/LevelUpMenu/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 74)
+layout_mode = 2
+text = "Опция 1"
+autowrap_mode = 2
+
+[node name="Option2Button" type="Button" parent="CanvasLayer/LevelUpMenu/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 74)
+layout_mode = 2
+text = "Опция 2"
+autowrap_mode = 2
+
+[node name="Option3Button" type="Button" parent="CanvasLayer/LevelUpMenu/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 74)
+layout_mode = 2
+text = "Опция 3"
+autowrap_mode = 2
 
 [node name="GameOverMenu" type="Control" parent="CanvasLayer"]
 visible = false

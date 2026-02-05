@@ -13,6 +13,7 @@ extends Node2D
 @onready var player: CharacterBody2D = $Player
 @onready var survival_timer_label: Label = $CanvasLayer/SurvivalTimerLabel
 @onready var kill_counter_label: Label = $CanvasLayer/KillCounterLabel
+@onready var level_label: Label = $CanvasLayer/LevelLabel
 @onready var main_menu: Control = $CanvasLayer/MainMenu
 @onready var game_over_menu: Control = $CanvasLayer/GameOverMenu
 @onready var game_over_time_label: Label = $CanvasLayer/GameOverMenu/CenterContainer/VBoxContainer/TimeLabel
@@ -21,6 +22,11 @@ extends Node2D
 @onready var exit_button: Button = $CanvasLayer/MainMenu/CenterContainer/VBoxContainer/ExitButton
 @onready var shotgun_slot_label: Label = $CanvasLayer/InventoryUI/SlotsContainer/Slot1/Label
 @onready var pause_button: Button = $CanvasLayer/PauseButton
+@onready var level_up_menu: Control = $CanvasLayer/LevelUpMenu
+@onready var level_up_title_label: Label = $CanvasLayer/LevelUpMenu/CenterContainer/VBoxContainer/TitleLabel
+@onready var level_up_option_1_button: Button = $CanvasLayer/LevelUpMenu/CenterContainer/VBoxContainer/Option1Button
+@onready var level_up_option_2_button: Button = $CanvasLayer/LevelUpMenu/CenterContainer/VBoxContainer/Option2Button
+@onready var level_up_option_3_button: Button = $CanvasLayer/LevelUpMenu/CenterContainer/VBoxContainer/Option3Button
 
 var noise := FastNoiseLite.new()
 var generated_chunks: Dictionary = {}
@@ -31,8 +37,46 @@ var _shotgun_pickup_script := preload("res://scripts/shotgun_pickup.gd")
 var _game_over := false
 var _survival_time := 0.0
 var _kill_count := 0
+var _level := 1
+var _xp := 0
+var _xp_to_next_level := 5
 var _game_started := false
 var _is_paused := false
+var _is_level_up_menu_open := false
+var _active_upgrade_options: Array = []
+
+const UPGRADE_POOL := [
+    {
+        "id": "pistol_damage",
+        "title": "Пистолет: урон +1",
+        "description": "Каждая пуля базового оружия наносит больше урона."
+    },
+    {
+        "id": "pistol_rate",
+        "title": "Пистолет: скорострельность",
+        "description": "Пистолет стреляет чаще (уменьшается пауза между выстрелами)."
+    },
+    {
+        "id": "pistol_speed",
+        "title": "Пистолет: скорость пули",
+        "description": "Пули летят быстрее и быстрее достигают цели."
+    },
+    {
+        "id": "shotgun_pellets",
+        "title": "Дробовик: +1 дробина",
+        "description": "Каждый выстрел дробовика выпускает больше дробин."
+    },
+    {
+        "id": "shotgun_rate",
+        "title": "Дробовик: темп огня",
+        "description": "Дробовик стреляет чаще."
+    },
+    {
+        "id": "shotgun_damage",
+        "title": "Дробовик: урон дроби",
+        "description": "Каждая дробина наносит больше урона."
+    }
+]
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -46,6 +90,7 @@ func _ready() -> void:
     _update_chunks()
     _update_survival_ui()
     _update_kill_counter_ui()
+    _update_level_ui()
     _update_inventory_ui()
     _spawn_shotgun_pickup()
     player.died.connect(_on_player_died)
@@ -53,6 +98,9 @@ func _ready() -> void:
     start_button.pressed.connect(_on_start_button_pressed)
     exit_button.pressed.connect(_on_exit_button_pressed)
     pause_button.pressed.connect(_on_pause_button_pressed)
+    level_up_option_1_button.pressed.connect(_on_level_up_option_selected.bind(0))
+    level_up_option_2_button.pressed.connect(_on_level_up_option_selected.bind(1))
+    level_up_option_3_button.pressed.connect(_on_level_up_option_selected.bind(2))
 
     _set_gameplay_active(false)
 
@@ -86,10 +134,12 @@ func _set_gameplay_active(is_active: bool) -> void:
     inventory_ui.visible = is_active
     pause_button.visible = is_active
     pause_button.text = "Пауза (Esc)"
+    level_label.visible = is_active
+    level_up_menu.visible = false
 
 
 func _toggle_pause() -> void:
-    if not _game_started or _game_over:
+    if not _game_started or _game_over or _is_level_up_menu_open:
         return
 
     _is_paused = not _is_paused
@@ -138,6 +188,9 @@ func _update_survival_ui() -> void:
 
 func _update_kill_counter_ui() -> void:
     kill_counter_label.text = "Убийства: %d" % _kill_count
+
+func _update_level_ui() -> void:
+    level_label.text = "Уровень: %d (%d/%d XP)" % [_level, _xp, _xp_to_next_level]
 
 func _format_survival_time(total_seconds: float) -> String:
     var whole_seconds := int(total_seconds)
@@ -225,7 +278,69 @@ func _on_enemy_died() -> void:
         return
 
     _kill_count += 1
+    _xp += 1
     _update_kill_counter_ui()
+    _update_level_ui()
+
+    if _xp >= _xp_to_next_level:
+        _level_up()
+
+func _level_up() -> void:
+    _level += 1
+    _xp -= _xp_to_next_level
+    _xp_to_next_level += 3
+    _update_level_ui()
+    _show_level_up_menu()
+
+func _show_level_up_menu() -> void:
+    _is_level_up_menu_open = true
+    _is_paused = true
+    get_tree().paused = true
+
+    level_up_title_label.text = "Новый уровень: %d" % _level
+    _active_upgrade_options = _build_upgrade_options(3)
+    _set_upgrade_button(level_up_option_1_button, 0)
+    _set_upgrade_button(level_up_option_2_button, 1)
+    _set_upgrade_button(level_up_option_3_button, 2)
+
+    level_up_menu.visible = true
+    pause_button.text = "Пауза (Esc)"
+
+func _build_upgrade_options(count: int) -> Array:
+    var options := UPGRADE_POOL.duplicate(true)
+    options.shuffle()
+    return options.slice(0, mini(count, options.size()))
+
+func _set_upgrade_button(button: Button, index: int) -> void:
+    if index >= _active_upgrade_options.size():
+        button.visible = false
+        button.disabled = true
+        return
+
+    var option: Dictionary = _active_upgrade_options[index]
+    var option_text := "%s\n%s" % [option["title"], option["description"]]
+    button.text = option_text
+    button.visible = true
+    button.disabled = false
+
+func _on_level_up_option_selected(index: int) -> void:
+    if index >= _active_upgrade_options.size():
+        return
+
+    var option: Dictionary = _active_upgrade_options[index]
+    if player.has_method("apply_weapon_upgrade"):
+        player.apply_weapon_upgrade(option["id"])
+
+    level_up_menu.visible = false
+    _active_upgrade_options.clear()
+    _is_level_up_menu_open = false
+
+    if _game_over:
+        return
+
+    _is_paused = false
+    get_tree().paused = false
+    pause_button.text = "Пауза (Esc)"
 
 func _on_player_died() -> void:
     if _game_over:
@@ -233,8 +348,10 @@ func _on_player_died() -> void:
 
     _game_over = true
     _is_paused = false
+    _is_level_up_menu_open = false
     get_tree().paused = false
     pause_button.visible = false
+    level_up_menu.visible = false
     player.set_physics_process(false)
     player.set_process(false)
     player.visible = false

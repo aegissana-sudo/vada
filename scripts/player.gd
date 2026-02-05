@@ -14,6 +14,7 @@ signal died
 @export var shotgun_shoot_interval := 0.7
 @export var shotgun_bullet_speed := 350.0
 @export var shotgun_bullet_damage := 1
+@export var shotgun_damage_bonus_per_upgrade := 1
 
 @onready var sprite: Sprite2D = $Sprite2D
 
@@ -21,6 +22,21 @@ var _shoot_timer := 0.0
 var _bullet_script := preload("res://scripts/bullet.gd")
 var _health := max_health
 var _has_shotgun := false
+
+func apply_weapon_upgrade(upgrade_id: String) -> void:
+    match upgrade_id:
+        "pistol_damage":
+            bullet_damage += 1
+        "pistol_rate":
+            shoot_interval = max(shoot_interval - 0.05, 0.1)
+        "pistol_speed":
+            bullet_speed += 40.0
+        "shotgun_pellets":
+            shotgun_pellet_count += 1
+        "shotgun_rate":
+            shotgun_shoot_interval = max(shotgun_shoot_interval - 0.07, 0.2)
+        "shotgun_damage":
+            shotgun_bullet_damage += shotgun_damage_bonus_per_upgrade
 
 func _ready() -> void:
     add_to_group("player")
