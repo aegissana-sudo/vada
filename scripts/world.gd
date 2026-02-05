@@ -36,6 +36,8 @@ var _is_paused := false
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
+    tile_map.process_mode = Node.PROCESS_MODE_PAUSABLE
+    player.process_mode = Node.PROCESS_MODE_PAUSABLE
     pause_button.process_mode = Node.PROCESS_MODE_ALWAYS
 
     noise.seed = randi()
@@ -119,6 +121,7 @@ func _update_inventory_ui() -> void:
 func _spawn_shotgun_pickup() -> void:
     var pickup = Area2D.new()
     pickup.set_script(_shotgun_pickup_script)
+    pickup.process_mode = Node.PROCESS_MODE_PAUSABLE
     pickup.global_position = player.global_position + Vector2(56.0, 12.0)
     pickup.picked_up.connect(_on_shotgun_picked_up)
     add_child(pickup)
@@ -202,6 +205,7 @@ func _update_enemy_spawns(delta: float) -> void:
 func _spawn_enemy() -> void:
     var enemy := CharacterBody2D.new()
     enemy.set_script(_enemy_script)
+    enemy.process_mode = Node.PROCESS_MODE_PAUSABLE
     _configure_enemy_difficulty(enemy)
 
     var angle := randf() * TAU
