@@ -93,7 +93,7 @@ func _get_shoot_interval() -> float:
     return shoot_interval
 
 func _shoot_shotgun(base_direction: Vector2) -> void:
-    var pellet_count := max(shotgun_pellet_count, 1)
+    var pellet_count := maxi(shotgun_pellet_count, 1)
     if pellet_count == 1:
         _spawn_bullet(base_direction, shotgun_bullet_speed, shotgun_bullet_damage)
         return
