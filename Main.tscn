@@ -38,6 +38,78 @@ offset_bottom = 48.0
 text = "Время: 0.0 с"
 label_settings = SubResource("2")
 
+[node name="InventoryUI" type="Control" parent="CanvasLayer"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -150.0
+offset_top = -66.0
+offset_right = 150.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="SlotsContainer" type="HBoxContainer" parent="CanvasLayer/InventoryUI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Slot1" type="PanelContainer" parent="CanvasLayer/InventoryUI/SlotsContainer"]
+custom_minimum_size = Vector2(52, 52)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/InventoryUI/SlotsContainer/Slot1"]
+layout_mode = 2
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Slot2" type="PanelContainer" parent="CanvasLayer/InventoryUI/SlotsContainer"]
+custom_minimum_size = Vector2(52, 52)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/InventoryUI/SlotsContainer/Slot2"]
+layout_mode = 2
+text = "2"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Slot3" type="PanelContainer" parent="CanvasLayer/InventoryUI/SlotsContainer"]
+custom_minimum_size = Vector2(52, 52)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/InventoryUI/SlotsContainer/Slot3"]
+layout_mode = 2
+text = "3"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Slot4" type="PanelContainer" parent="CanvasLayer/InventoryUI/SlotsContainer"]
+custom_minimum_size = Vector2(52, 52)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/InventoryUI/SlotsContainer/Slot4"]
+layout_mode = 2
+text = "4"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Slot5" type="PanelContainer" parent="CanvasLayer/InventoryUI/SlotsContainer"]
+custom_minimum_size = Vector2(52, 52)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/InventoryUI/SlotsContainer/Slot5"]
+layout_mode = 2
+text = "5"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="GameOverMenu" type="Control" parent="CanvasLayer"]
 visible = false
 layout_mode = 3
