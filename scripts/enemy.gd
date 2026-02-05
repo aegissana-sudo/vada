@@ -12,13 +12,29 @@ signal died
 var target: Node2D
 var _health := max_health
 var _contact_timer := 0.0
+var _body_color := Color(0.9, 0.2, 0.2)
+var _body_size := 14
 
 @onready var sprite: Sprite2D = _ensure_sprite()
 @onready var collision: CollisionShape2D = _ensure_collision()
 
 func _ready() -> void:
     add_to_group("enemies")
+    _health = max_health
+    _apply_visual_style()
     queue_redraw()
+
+func setup_stats(new_speed: float, new_max_health: int, new_contact_damage: int, color: Color, body_size: int = 14) -> void:
+    speed = new_speed
+    max_health = new_max_health
+    contact_damage = new_contact_damage
+    _health = max_health
+    _body_color = color
+    _body_size = max(body_size, 8)
+
+    if is_node_ready():
+        _apply_visual_style()
+        queue_redraw()
 
 func _physics_process(delta: float) -> void:
     _contact_timer = max(_contact_timer - delta, 0.0)
@@ -78,6 +94,21 @@ func _ensure_sprite() -> Sprite2D:
     sprite_node.texture = texture
     add_child(sprite_node)
     return sprite_node
+
+func _apply_visual_style() -> void:
+    var image := Image.create(_body_size, _body_size, false, Image.FORMAT_RGBA8)
+    image.fill(_body_color)
+    sprite.texture = ImageTexture.create_from_image(image)
+    sprite.centered = true
+
+    var shape := collision.shape as CircleShape2D
+    if shape == null:
+        shape = CircleShape2D.new()
+        collision.shape = shape
+    shape.radius = _body_size * 0.45
+
+    health_bar_size = Vector2(max(float(_body_size) + 4.0, 18.0), 3.0)
+    health_bar_offset = Vector2(-health_bar_size.x * 0.5, -float(_body_size) * 0.8)
 
 func _ensure_collision() -> CollisionShape2D:
     if has_node("CollisionShape2D"):

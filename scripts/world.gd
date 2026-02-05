@@ -6,6 +6,8 @@ extends Node2D
 @export var enemy_spawn_interval := 1.0
 @export var max_enemies := 12
 @export var enemy_spawn_radius := 260.0
+@export var hard_enemy_unlock_time := 120.0
+@export var hard_enemy_spawn_chance := 0.35
 
 @onready var tile_map: TileMap = $TileMap
 @onready var player: CharacterBody2D = $Player
@@ -140,12 +142,19 @@ func _update_enemy_spawns(delta: float) -> void:
 func _spawn_enemy() -> void:
     var enemy := CharacterBody2D.new()
     enemy.set_script(_enemy_script)
+    _configure_enemy_difficulty(enemy)
+
     var angle := randf() * TAU
     var offset := Vector2(cos(angle), sin(angle)) * enemy_spawn_radius
     enemy.global_position = player.global_position + offset
     enemy.target = player
     enemy.died.connect(_on_enemy_died)
     add_child(enemy)
+
+func _configure_enemy_difficulty(enemy: CharacterBody2D) -> void:
+    var should_spawn_hard_enemy := _survival_time >= hard_enemy_unlock_time and randf() < hard_enemy_spawn_chance
+    if should_spawn_hard_enemy and enemy.has_method("setup_stats"):
+        enemy.setup_stats(120.0, 6, 2, Color(0.6, 0.1, 0.9), 18)
 
 func _on_enemy_died() -> void:
     if _game_over:
