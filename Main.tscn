@@ -47,6 +47,18 @@ offset_bottom = 82.0
 text = "Убийства: 0"
 label_settings = SubResource("2")
 
+[node name="PauseButton" type="Button" parent="CanvasLayer"]
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -216.0
+offset_top = 12.0
+offset_right = -16.0
+offset_bottom = 52.0
+text = "Пауза (Esc)"
+
 [node name="InventoryUI" type="Control" parent="CanvasLayer"]
 layout_mode = 1
 anchors_preset = 7

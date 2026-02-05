@@ -20,6 +20,7 @@ extends Node2D
 @onready var start_button: Button = $CanvasLayer/MainMenu/CenterContainer/VBoxContainer/StartButton
 @onready var exit_button: Button = $CanvasLayer/MainMenu/CenterContainer/VBoxContainer/ExitButton
 @onready var shotgun_slot_label: Label = $CanvasLayer/InventoryUI/SlotsContainer/Slot1/Label
+@onready var pause_button: Button = $CanvasLayer/PauseButton
 
 var noise := FastNoiseLite.new()
 var generated_chunks: Dictionary = {}
@@ -31,8 +32,12 @@ var _game_over := false
 var _survival_time := 0.0
 var _kill_count := 0
 var _game_started := false
+var _is_paused := false
 
 func _ready() -> void:
+    process_mode = Node.PROCESS_MODE_ALWAYS
+    pause_button.process_mode = Node.PROCESS_MODE_ALWAYS
+
     noise.seed = randi()
     noise.frequency = 0.05
     _setup_tileset()
@@ -45,11 +50,12 @@ func _ready() -> void:
     retry_button.pressed.connect(_on_retry_button_pressed)
     start_button.pressed.connect(_on_start_button_pressed)
     exit_button.pressed.connect(_on_exit_button_pressed)
+    pause_button.pressed.connect(_on_pause_button_pressed)
 
     _set_gameplay_active(false)
 
 func _process(delta: float) -> void:
-    if not _game_started or _game_over:
+    if not _game_started or _game_over or _is_paused:
         return
     _survival_time += delta
     _update_survival_ui()
@@ -57,8 +63,15 @@ func _process(delta: float) -> void:
     _update_enemy_spawns(delta)
 
 
+func _unhandled_input(event: InputEvent) -> void:
+    if event.is_action_pressed("ui_cancel"):
+        _toggle_pause()
+
+
 func _set_gameplay_active(is_active: bool) -> void:
     _game_started = is_active
+    _is_paused = false
+    get_tree().paused = false
     player.set_physics_process(is_active)
     player.set_process(is_active)
     player.visible = is_active
@@ -69,11 +82,27 @@ func _set_gameplay_active(is_active: bool) -> void:
 
     var inventory_ui: Control = $CanvasLayer/InventoryUI
     inventory_ui.visible = is_active
+    pause_button.visible = is_active
+    pause_button.text = "Пауза (Esc)"
+
+
+func _toggle_pause() -> void:
+    if not _game_started or _game_over:
+        return
+
+    _is_paused = not _is_paused
+    get_tree().paused = _is_paused
+    pause_button.text = "Продолжить (Esc)" if _is_paused else "Пауза (Esc)"
+
+
+func _on_pause_button_pressed() -> void:
+    _toggle_pause()
 
 
 func _on_start_button_pressed() -> void:
     main_menu.visible = false
     _set_gameplay_active(true)
+    get_tree().paused = false
 
 
 func _on_exit_button_pressed() -> void:
@@ -199,6 +228,9 @@ func _on_player_died() -> void:
         return
 
     _game_over = true
+    _is_paused = false
+    get_tree().paused = false
+    pause_button.visible = false
     player.set_physics_process(false)
     player.set_process(false)
     player.visible = false
