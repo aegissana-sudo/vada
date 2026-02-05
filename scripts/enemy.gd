@@ -39,7 +39,7 @@ func _apply_contact_damage() -> void:
         return
 
     for index in range(get_slide_collision_count()):
-        var collision := get_slide_collision(index)
+        var collision: KinematicCollision2D = get_slide_collision(index)
         var collider := collision.get_collider()
         if collider == target and collider.has_method("take_damage"):
             collider.take_damage(contact_damage)
