@@ -101,7 +101,7 @@ func _shoot_shotgun(base_direction: Vector2) -> void:
     var spread_radians := deg_to_rad(shotgun_spread_degrees)
     for index in range(pellet_count):
         var ratio := float(index) / float(pellet_count - 1)
-        var angle_offset := lerp(-spread_radians * 0.5, spread_radians * 0.5, ratio)
+        var angle_offset: float = lerpf(-spread_radians * 0.5, spread_radians * 0.5, ratio)
         var pellet_direction := base_direction.rotated(angle_offset).normalized()
         _spawn_bullet(pellet_direction, shotgun_bullet_speed, shotgun_bullet_damage)
 
