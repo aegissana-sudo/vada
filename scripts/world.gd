@@ -10,6 +10,7 @@ extends Node2D
 @onready var tile_map: TileMap = $TileMap
 @onready var player: CharacterBody2D = $Player
 @onready var survival_timer_label: Label = $CanvasLayer/SurvivalTimerLabel
+@onready var kill_counter_label: Label = $CanvasLayer/KillCounterLabel
 @onready var game_over_menu: Control = $CanvasLayer/GameOverMenu
 @onready var game_over_time_label: Label = $CanvasLayer/GameOverMenu/CenterContainer/VBoxContainer/TimeLabel
 @onready var retry_button: Button = $CanvasLayer/GameOverMenu/CenterContainer/VBoxContainer/RetryButton
@@ -21,6 +22,7 @@ var _enemy_spawn_timer := 0.0
 var _enemy_script := preload("res://scripts/enemy.gd")
 var _game_over := false
 var _survival_time := 0.0
+var _kill_count := 0
 
 func _ready() -> void:
     noise.seed = randi()
@@ -28,6 +30,7 @@ func _ready() -> void:
     _setup_tileset()
     _update_chunks()
     _update_survival_ui()
+    _update_kill_counter_ui()
     player.died.connect(_on_player_died)
     retry_button.pressed.connect(_on_retry_button_pressed)
 
@@ -44,6 +47,10 @@ func _update_survival_ui() -> void:
     var text := "Время: %s" % formatted_time
     survival_timer_label.text = text
     game_over_time_label.text = "Продержались: %s" % formatted_time
+
+
+func _update_kill_counter_ui() -> void:
+    kill_counter_label.text = "Убийства: %d" % _kill_count
 
 func _format_survival_time(total_seconds: float) -> String:
     var whole_seconds := int(total_seconds)
@@ -115,7 +122,15 @@ func _spawn_enemy() -> void:
     var offset := Vector2(cos(angle), sin(angle)) * enemy_spawn_radius
     enemy.global_position = player.global_position + offset
     enemy.target = player
+    enemy.died.connect(_on_enemy_died)
     add_child(enemy)
+
+func _on_enemy_died() -> void:
+    if _game_over:
+        return
+
+    _kill_count += 1
+    _update_kill_counter_ui()
 
 func _on_player_died() -> void:
     if _game_over:

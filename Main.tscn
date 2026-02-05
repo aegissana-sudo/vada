@@ -38,6 +38,15 @@ offset_bottom = 48.0
 text = "Время: 0.0 с"
 label_settings = SubResource("2")
 
+[node name="KillCounterLabel" type="Label" parent="CanvasLayer"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 46.0
+offset_right = 240.0
+offset_bottom = 82.0
+text = "Убийства: 0"
+label_settings = SubResource("2")
+
 [node name="InventoryUI" type="Control" parent="CanvasLayer"]
 layout_mode = 1
 anchors_preset = 7
