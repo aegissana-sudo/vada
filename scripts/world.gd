@@ -7,6 +7,8 @@ extends Node2D
 @export var max_enemies := 12
 @export var enemy_spawn_radius := 260.0
 @export var hard_enemy_unlock_time := 120.0
+@export var bomber_enemy_unlock_time := 120.0
+@export var bomber_enemy_spawn_chance := 0.3
 @export var hard_enemy_spawn_chance := 0.35
 @export var escalation_start_time := 180.0
 @export var shield_enemy_spawn_chance := 0.45
@@ -44,7 +46,7 @@ var _survival_time := 0.0
 var _kill_count := 0
 var _level := 1
 var _xp := 0
-var _xp_to_next_level := 5
+var _xp_to_next_level := 15
 var _game_started := false
 var _is_paused := false
 var _is_level_up_menu_open := false
@@ -334,12 +336,20 @@ func _spawn_enemy() -> void:
     add_child(enemy)
 
 func _configure_enemy_difficulty(enemy: CharacterBody2D) -> void:
+    if not enemy.has_method("setup_stats"):
+        return
+
+    var is_bomber_enemy := _survival_time >= bomber_enemy_unlock_time and randf() < bomber_enemy_spawn_chance
+    if is_bomber_enemy:
+        enemy.setup_stats(108.0, 3, 1, Color(1.0, 0.45, 0.15), 15, 0, true, 3)
+        return
+
     var is_hard_enemy := _survival_time >= hard_enemy_unlock_time and randf() < hard_enemy_spawn_chance
-    if is_hard_enemy and enemy.has_method("setup_stats"):
+    if is_hard_enemy:
         enemy.setup_stats(120.0, 6, 2, Color(0.6, 0.1, 0.9), 18)
 
     var should_spawn_shielded_enemy := _survival_time >= escalation_start_time and randf() < shield_enemy_spawn_chance
-    if should_spawn_shielded_enemy and enemy.has_method("setup_stats"):
+    if should_spawn_shielded_enemy:
         if is_hard_enemy:
             enemy.setup_stats(132.0, 8, 2, Color(0.45, 0.75, 1.0), 18, shield_enemy_amount)
         else:
@@ -360,7 +370,7 @@ func _on_enemy_died() -> void:
 func _level_up() -> void:
     _level += 1
     _xp -= _xp_to_next_level
-    _xp_to_next_level += 3
+    _xp_to_next_level += 9
     _update_level_ui()
     _show_level_up_menu()
 

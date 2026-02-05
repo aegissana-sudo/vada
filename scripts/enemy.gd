@@ -10,6 +10,8 @@ signal died
 @export var health_bar_offset := Vector2(-9.0, -14.0)
 @export var shield_bar_size := Vector2(18.0, 2.0)
 @export var shield_bar_offset := Vector2(-9.0, -18.0)
+@export var explode_on_contact := false
+@export var explosion_damage := 2
 
 var target: Node2D
 var _health := max_health
@@ -28,7 +30,7 @@ func _ready() -> void:
     _apply_visual_style()
     queue_redraw()
 
-func setup_stats(new_speed: float, new_max_health: int, new_contact_damage: int, color: Color, body_size: int = 14, shield_amount: int = 0) -> void:
+func setup_stats(new_speed: float, new_max_health: int, new_contact_damage: int, color: Color, body_size: int = 14, shield_amount: int = 0, should_explode_on_contact: bool = false, new_explosion_damage: int = 2) -> void:
     speed = new_speed
     max_health = new_max_health
     contact_damage = new_contact_damage
@@ -37,6 +39,8 @@ func setup_stats(new_speed: float, new_max_health: int, new_contact_damage: int,
     _body_size = max(body_size, 8)
     _max_shield = max(shield_amount, 0)
     _shield = _max_shield
+    explode_on_contact = should_explode_on_contact
+    explosion_damage = max(new_explosion_damage, 1)
 
     if is_node_ready():
         _apply_visual_style()
@@ -69,6 +73,12 @@ func _apply_contact_damage() -> void:
         var collision: KinematicCollision2D = get_slide_collision(index)
         var collider := collision.get_collider()
         if collider == target and collider.has_method("take_damage"):
+            if explode_on_contact:
+                collider.take_damage(max(explosion_damage, contact_damage))
+                died.emit()
+                queue_free()
+                return
+
             collider.take_damage(contact_damage)
             _contact_timer = contact_damage_interval
             return
