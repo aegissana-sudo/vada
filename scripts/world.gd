@@ -15,6 +15,7 @@ extends Node2D
 @export var shield_enemy_amount := 2
 @export var hazard_damage := 1
 @export var hazard_damage_interval := 0.5
+@export var enemy_health_doubling_interval := 120.0
 
 @onready var tile_map: TileMap = $TileMap
 @onready var player: CharacterBody2D = $Player
@@ -53,6 +54,8 @@ var _is_level_up_menu_open := false
 var _active_upgrade_options: Array = []
 var _hazards_active := false
 var _hazard_damage_timer := 0.0
+var _enemy_health_multiplier := 1
+var _next_enemy_health_doubling_time := 0.0
 
 const TILE_GRASS := Vector2i(0, 0)
 const TILE_WATER := Vector2i(1, 0)
@@ -124,6 +127,7 @@ func _process(delta: float) -> void:
     _update_survival_ui()
     _update_chunks()
     _update_enemy_spawns(delta)
+    _update_enemy_health_scaling()
     _update_environment_escalation(delta)
 
 
@@ -150,6 +154,10 @@ func _set_gameplay_active(is_active: bool) -> void:
     pause_button.text = "Пауза (Esc)"
     level_label.visible = is_active
     level_up_menu.visible = false
+
+    if is_active:
+        _enemy_health_multiplier = 1
+        _next_enemy_health_doubling_time = enemy_health_doubling_interval
 
 
 func _toggle_pause() -> void:
@@ -332,8 +340,24 @@ func _spawn_enemy() -> void:
     var offset := Vector2(cos(angle), sin(angle)) * enemy_spawn_radius
     enemy.global_position = player.global_position + offset
     enemy.target = player
+    if enemy.has_method("multiply_health") and _enemy_health_multiplier > 1:
+        enemy.multiply_health(_enemy_health_multiplier)
     enemy.died.connect(_on_enemy_died)
     add_child(enemy)
+
+func _update_enemy_health_scaling() -> void:
+    if enemy_health_doubling_interval <= 0.0:
+        return
+
+    while _survival_time >= _next_enemy_health_doubling_time:
+        _enemy_health_multiplier *= 2
+        _next_enemy_health_doubling_time += enemy_health_doubling_interval
+        _double_existing_enemies_health()
+
+func _double_existing_enemies_health() -> void:
+    for enemy in get_tree().get_nodes_in_group("enemies"):
+        if enemy != null and enemy.has_method("multiply_health"):
+            enemy.multiply_health(2)
 
 func _configure_enemy_difficulty(enemy: CharacterBody2D) -> void:
     if not enemy.has_method("setup_stats"):
