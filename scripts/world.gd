@@ -9,7 +9,9 @@ extends Node2D
 
 @onready var tile_map: TileMap = $TileMap
 @onready var player: CharacterBody2D = $Player
+@onready var survival_timer_label: Label = $CanvasLayer/SurvivalTimerLabel
 @onready var game_over_menu: Control = $CanvasLayer/GameOverMenu
+@onready var game_over_time_label: Label = $CanvasLayer/GameOverMenu/CenterContainer/VBoxContainer/TimeLabel
 @onready var retry_button: Button = $CanvasLayer/GameOverMenu/CenterContainer/VBoxContainer/RetryButton
 
 var noise := FastNoiseLite.new()
@@ -18,20 +20,29 @@ var tileset_source_id := -1
 var _enemy_spawn_timer := 0.0
 var _enemy_script := preload("res://scripts/enemy.gd")
 var _game_over := false
+var _survival_time := 0.0
 
 func _ready() -> void:
     noise.seed = randi()
     noise.frequency = 0.05
     _setup_tileset()
     _update_chunks()
+    _update_survival_ui()
     player.died.connect(_on_player_died)
     retry_button.pressed.connect(_on_retry_button_pressed)
 
 func _process(delta: float) -> void:
     if _game_over:
         return
+    _survival_time += delta
+    _update_survival_ui()
     _update_chunks()
     _update_enemy_spawns(delta)
+
+func _update_survival_ui() -> void:
+    var text := "Время: %.1f с" % _survival_time
+    survival_timer_label.text = text
+    game_over_time_label.text = "Продержались: %.1f с" % _survival_time
 
 func _setup_tileset() -> void:
     var tileset := TileSet.new()
