@@ -14,12 +14,14 @@ extends Node2D
 @onready var game_over_menu: Control = $CanvasLayer/GameOverMenu
 @onready var game_over_time_label: Label = $CanvasLayer/GameOverMenu/CenterContainer/VBoxContainer/TimeLabel
 @onready var retry_button: Button = $CanvasLayer/GameOverMenu/CenterContainer/VBoxContainer/RetryButton
+@onready var shotgun_slot_label: Label = $CanvasLayer/InventoryUI/SlotsContainer/Slot1/Label
 
 var noise := FastNoiseLite.new()
 var generated_chunks: Dictionary = {}
 var tileset_source_id := -1
 var _enemy_spawn_timer := 0.0
 var _enemy_script := preload("res://scripts/enemy.gd")
+var _shotgun_pickup_script := preload("res://scripts/shotgun_pickup.gd")
 var _game_over := false
 var _survival_time := 0.0
 var _kill_count := 0
@@ -31,6 +33,8 @@ func _ready() -> void:
     _update_chunks()
     _update_survival_ui()
     _update_kill_counter_ui()
+    _update_inventory_ui()
+    _spawn_shotgun_pickup()
     player.died.connect(_on_player_died)
     retry_button.pressed.connect(_on_retry_button_pressed)
 
@@ -41,6 +45,24 @@ func _process(delta: float) -> void:
     _update_survival_ui()
     _update_chunks()
     _update_enemy_spawns(delta)
+
+
+func _update_inventory_ui() -> void:
+    if bool(player.call("has_shotgun")):
+        shotgun_slot_label.text = "ДРБ"
+        return
+
+    shotgun_slot_label.text = "1"
+
+func _spawn_shotgun_pickup() -> void:
+    var pickup = Area2D.new()
+    pickup.set_script(_shotgun_pickup_script)
+    pickup.global_position = player.global_position + Vector2(56.0, 12.0)
+    pickup.picked_up.connect(_on_shotgun_picked_up)
+    add_child(pickup)
+
+func _on_shotgun_picked_up() -> void:
+    _update_inventory_ui()
 
 func _update_survival_ui() -> void:
     var formatted_time := _format_survival_time(_survival_time)

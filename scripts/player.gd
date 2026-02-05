@@ -9,14 +9,21 @@ signal died
 @export var max_health := 6
 @export var health_bar_size := Vector2(20.0, 4.0)
 @export var health_bar_offset := Vector2(-10.0, -18.0)
+@export var shotgun_pellet_count := 6
+@export var shotgun_spread_degrees := 24.0
+@export var shotgun_shoot_interval := 0.7
+@export var shotgun_bullet_speed := 350.0
+@export var shotgun_bullet_damage := 1
 
 @onready var sprite: Sprite2D = $Sprite2D
 
 var _shoot_timer := 0.0
 var _bullet_script := preload("res://scripts/bullet.gd")
 var _health := max_health
+var _has_shotgun := false
 
 func _ready() -> void:
+    add_to_group("player")
     var image := Image.create(16, 16, false, Image.FORMAT_RGBA8)
     image.fill(Color(1.0, 0.85, 0.2))
     var texture := ImageTexture.create_from_image(image)
@@ -44,7 +51,7 @@ func _process(delta: float) -> void:
     if target == null:
         return
 
-    _shoot_timer = shoot_interval
+    _shoot_timer = _get_shoot_interval()
     _shoot_at(target)
 
 func _find_nearest_enemy() -> Node2D:
@@ -68,12 +75,43 @@ func _shoot_at(target: Node2D) -> void:
     if direction.length() == 0.0:
         return
 
+    if _has_shotgun:
+        _shoot_shotgun(direction.normalized())
+        return
+
+    _spawn_bullet(direction.normalized(), bullet_speed, bullet_damage)
+
+func equip_shotgun() -> void:
+    _has_shotgun = true
+
+func has_shotgun() -> bool:
+    return _has_shotgun
+
+func _get_shoot_interval() -> float:
+    if _has_shotgun:
+        return shotgun_shoot_interval
+    return shoot_interval
+
+func _shoot_shotgun(base_direction: Vector2) -> void:
+    var pellet_count := max(shotgun_pellet_count, 1)
+    if pellet_count == 1:
+        _spawn_bullet(base_direction, shotgun_bullet_speed, shotgun_bullet_damage)
+        return
+
+    var spread_radians := deg_to_rad(shotgun_spread_degrees)
+    for index in range(pellet_count):
+        var ratio := float(index) / float(pellet_count - 1)
+        var angle_offset := lerp(-spread_radians * 0.5, spread_radians * 0.5, ratio)
+        var pellet_direction := base_direction.rotated(angle_offset).normalized()
+        _spawn_bullet(pellet_direction, shotgun_bullet_speed, shotgun_bullet_damage)
+
+func _spawn_bullet(direction: Vector2, speed_value: float, damage_value: int) -> void:
     var bullet := Area2D.new()
     bullet.set_script(_bullet_script)
     bullet.global_position = global_position
-    bullet.direction = direction.normalized()
-    bullet.speed = bullet_speed
-    bullet.damage = bullet_damage
+    bullet.direction = direction
+    bullet.speed = speed_value
+    bullet.damage = damage_value
     get_parent().add_child(bullet)
 
 func take_damage(amount: int) -> void:
