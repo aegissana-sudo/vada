@@ -40,9 +40,16 @@ func _process(delta: float) -> void:
     _update_enemy_spawns(delta)
 
 func _update_survival_ui() -> void:
-    var text := "Время: %.1f с" % _survival_time
+    var formatted_time := _format_survival_time(_survival_time)
+    var text := "Время: %s" % formatted_time
     survival_timer_label.text = text
-    game_over_time_label.text = "Продержались: %.1f с" % _survival_time
+    game_over_time_label.text = "Продержались: %s" % formatted_time
+
+func _format_survival_time(total_seconds: float) -> String:
+    var whole_seconds := int(total_seconds)
+    var minutes := whole_seconds / 60
+    var seconds := whole_seconds % 60
+    return "%02d:%02d" % [minutes, seconds]
 
 func _setup_tileset() -> void:
     var tileset := TileSet.new()
