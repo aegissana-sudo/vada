@@ -35,6 +35,7 @@ extends Node2D
 @onready var level_up_option_1_button: Button = $CanvasLayer/LevelUpMenu/CenterContainer/VBoxContainer/Option1Button
 @onready var level_up_option_2_button: Button = $CanvasLayer/LevelUpMenu/CenterContainer/VBoxContainer/Option2Button
 @onready var level_up_option_3_button: Button = $CanvasLayer/LevelUpMenu/CenterContainer/VBoxContainer/Option3Button
+@onready var chest_indicator_label: Label = $CanvasLayer/ChestIndicatorLabel
 
 var noise := FastNoiseLite.new()
 var generated_chunks: Dictionary = {}
@@ -56,6 +57,11 @@ var _hazards_active := false
 var _hazard_damage_timer := 0.0
 var _enemy_health_multiplier := 1
 var _next_enemy_health_doubling_time := 0.0
+var _shotgun_pickup: Area2D
+
+const SHOTGUN_PICKUP_MIN_DISTANCE := 420.0
+const SHOTGUN_PICKUP_MAX_DISTANCE := 1150.0
+const SHOTGUN_PICKUP_SPAWN_ATTEMPTS := 24
 
 const TILE_GRASS := Vector2i(0, 0)
 const TILE_WATER := Vector2i(1, 0)
@@ -109,6 +115,7 @@ func _ready() -> void:
     _update_level_ui()
     _update_inventory_ui()
     _spawn_shotgun_pickup()
+    _update_chest_indicator_ui()
     player.died.connect(_on_player_died)
     retry_button.pressed.connect(_on_retry_button_pressed)
     start_button.pressed.connect(_on_start_button_pressed)
@@ -129,6 +136,7 @@ func _process(delta: float) -> void:
     _update_enemy_spawns(delta)
     _update_enemy_health_scaling()
     _update_environment_escalation(delta)
+    _update_chest_indicator_ui()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -154,6 +162,7 @@ func _set_gameplay_active(is_active: bool) -> void:
     pause_button.text = "Пауза (Esc)"
     level_label.visible = is_active
     level_up_menu.visible = false
+    chest_indicator_label.visible = is_active and _shotgun_pickup != null
 
     if is_active:
         _enemy_health_multiplier = 1
@@ -191,15 +200,59 @@ func _update_inventory_ui() -> void:
     shotgun_slot_label.text = "1"
 
 func _spawn_shotgun_pickup() -> void:
-    var pickup = Area2D.new()
-    pickup.set_script(_shotgun_pickup_script)
-    pickup.process_mode = Node.PROCESS_MODE_PAUSABLE
-    pickup.global_position = player.global_position + Vector2(56.0, 12.0)
-    pickup.picked_up.connect(_on_shotgun_picked_up)
-    add_child(pickup)
+    _shotgun_pickup = Area2D.new()
+    _shotgun_pickup.set_script(_shotgun_pickup_script)
+    _shotgun_pickup.process_mode = Node.PROCESS_MODE_PAUSABLE
+    _shotgun_pickup.global_position = _pick_random_shotgun_position()
+    _shotgun_pickup.picked_up.connect(_on_shotgun_picked_up)
+    add_child(_shotgun_pickup)
 
 func _on_shotgun_picked_up() -> void:
+    _shotgun_pickup = null
     _update_inventory_ui()
+    _update_chest_indicator_ui()
+
+func _pick_random_shotgun_position() -> Vector2:
+    for _attempt in range(SHOTGUN_PICKUP_SPAWN_ATTEMPTS):
+        var angle := randf() * TAU
+        var distance := randf_range(SHOTGUN_PICKUP_MIN_DISTANCE, SHOTGUN_PICKUP_MAX_DISTANCE)
+        var offset := Vector2(cos(angle), sin(angle)) * distance
+        var world_position := player.global_position + offset
+        var tile_position := Vector2i(
+            floor(world_position.x / tile_size),
+            floor(world_position.y / tile_size)
+        )
+        var chunk := Vector2i(
+            floor(float(tile_position.x) / chunk_size),
+            floor(float(tile_position.y) / chunk_size)
+        )
+        if not generated_chunks.has(chunk):
+            _generate_chunk(chunk)
+
+        if _select_atlas_for_tile(tile_position.x, tile_position.y) == TILE_GRASS:
+            return world_position
+
+    return player.global_position + Vector2(SHOTGUN_PICKUP_MIN_DISTANCE, 0.0)
+
+func _update_chest_indicator_ui() -> void:
+    if _shotgun_pickup == null:
+        chest_indicator_label.visible = false
+        return
+
+    var to_chest := _shotgun_pickup.global_position - player.global_position
+    var distance := int(to_chest.length())
+    var direction_arrow := _get_direction_arrow(to_chest)
+    chest_indicator_label.text = "Сундук с дробовиком: %s %d" % [direction_arrow, distance]
+    chest_indicator_label.visible = _game_started and not _game_over
+
+func _get_direction_arrow(direction: Vector2) -> String:
+    if direction.length() <= 0.001:
+        return "•"
+
+    var angle := fposmod(direction.angle(), TAU)
+    var octant := int(round(angle / (PI / 4.0))) % 8
+    var arrows := ["→", "↘", "↓", "↙", "←", "↖", "↑", "↗"]
+    return arrows[octant]
 
 func _update_survival_ui() -> void:
     var formatted_time := _format_survival_time(_survival_time)

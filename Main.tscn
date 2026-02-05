@@ -57,6 +57,16 @@ offset_bottom = 116.0
 text = "Уровень: 1 (0/5 XP)"
 label_settings = SubResource("2")
 
+[node name="ChestIndicatorLabel" type="Label" parent="CanvasLayer"]
+visible = false
+layout_mode = 0
+offset_left = 16.0
+offset_top = 114.0
+offset_right = 500.0
+offset_bottom = 148.0
+text = "Сундук с дробовиком: → 0"
+label_settings = SubResource("2")
+
 [node name="PauseButton" type="Button" parent="CanvasLayer"]
 visible = false
 layout_mode = 1
