@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+signal died
+
 @export var speed := 80.0
 @export var max_health := 3
 @export var contact_damage := 1
@@ -48,6 +50,7 @@ func take_damage(amount: int) -> void:
     _health -= amount
     queue_redraw()
     if _health <= 0:
+        died.emit()
         queue_free()
 
 func _draw() -> void:

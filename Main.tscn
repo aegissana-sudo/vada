@@ -38,6 +38,15 @@ offset_bottom = 48.0
 text = "Время: 0.0 с"
 label_settings = SubResource("2")
 
+[node name="KillsLabel" type="Label" parent="CanvasLayer"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 52.0
+offset_right = 260.0
+offset_bottom = 88.0
+text = "Убийства: 0"
+label_settings = SubResource("2")
+
 [node name="GameOverMenu" type="Control" parent="CanvasLayer"]
 visible = false
 layout_mode = 3
