@@ -13,9 +13,12 @@ extends Node2D
 @onready var player: CharacterBody2D = $Player
 @onready var survival_timer_label: Label = $CanvasLayer/SurvivalTimerLabel
 @onready var kill_counter_label: Label = $CanvasLayer/KillCounterLabel
+@onready var main_menu: Control = $CanvasLayer/MainMenu
 @onready var game_over_menu: Control = $CanvasLayer/GameOverMenu
 @onready var game_over_time_label: Label = $CanvasLayer/GameOverMenu/CenterContainer/VBoxContainer/TimeLabel
 @onready var retry_button: Button = $CanvasLayer/GameOverMenu/CenterContainer/VBoxContainer/RetryButton
+@onready var start_button: Button = $CanvasLayer/MainMenu/CenterContainer/VBoxContainer/StartButton
+@onready var exit_button: Button = $CanvasLayer/MainMenu/CenterContainer/VBoxContainer/ExitButton
 @onready var shotgun_slot_label: Label = $CanvasLayer/InventoryUI/SlotsContainer/Slot1/Label
 
 var noise := FastNoiseLite.new()
@@ -27,6 +30,7 @@ var _shotgun_pickup_script := preload("res://scripts/shotgun_pickup.gd")
 var _game_over := false
 var _survival_time := 0.0
 var _kill_count := 0
+var _game_started := false
 
 func _ready() -> void:
     noise.seed = randi()
@@ -39,14 +43,41 @@ func _ready() -> void:
     _spawn_shotgun_pickup()
     player.died.connect(_on_player_died)
     retry_button.pressed.connect(_on_retry_button_pressed)
+    start_button.pressed.connect(_on_start_button_pressed)
+    exit_button.pressed.connect(_on_exit_button_pressed)
+
+    _set_gameplay_active(false)
 
 func _process(delta: float) -> void:
-    if _game_over:
+    if not _game_started or _game_over:
         return
     _survival_time += delta
     _update_survival_ui()
     _update_chunks()
     _update_enemy_spawns(delta)
+
+
+func _set_gameplay_active(is_active: bool) -> void:
+    _game_started = is_active
+    player.set_physics_process(is_active)
+    player.set_process(is_active)
+    player.visible = is_active
+
+    if player.has_node("CollisionShape2D"):
+        var collider: CollisionShape2D = player.get_node("CollisionShape2D")
+        collider.disabled = not is_active
+
+    var inventory_ui: Control = $CanvasLayer/InventoryUI
+    inventory_ui.visible = is_active
+
+
+func _on_start_button_pressed() -> void:
+    main_menu.visible = false
+    _set_gameplay_active(true)
+
+
+func _on_exit_button_pressed() -> void:
+    get_tree().quit()
 
 
 func _update_inventory_ui() -> void:
