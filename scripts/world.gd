@@ -8,6 +8,11 @@ extends Node2D
 @export var enemy_spawn_radius := 260.0
 @export var hard_enemy_unlock_time := 120.0
 @export var hard_enemy_spawn_chance := 0.35
+@export var escalation_start_time := 180.0
+@export var shield_enemy_spawn_chance := 0.45
+@export var shield_enemy_amount := 2
+@export var hazard_damage := 1
+@export var hazard_damage_interval := 0.5
 
 @onready var tile_map: TileMap = $TileMap
 @onready var player: CharacterBody2D = $Player
@@ -44,6 +49,12 @@ var _game_started := false
 var _is_paused := false
 var _is_level_up_menu_open := false
 var _active_upgrade_options: Array = []
+var _hazards_active := false
+var _hazard_damage_timer := 0.0
+
+const TILE_GRASS := Vector2i(0, 0)
+const TILE_WATER := Vector2i(1, 0)
+const TILE_HAZARD := Vector2i(2, 0)
 
 const UPGRADE_POOL := [
     {
@@ -111,6 +122,7 @@ func _process(delta: float) -> void:
     _update_survival_ui()
     _update_chunks()
     _update_enemy_spawns(delta)
+    _update_environment_escalation(delta)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -203,15 +215,17 @@ func _setup_tileset() -> void:
     var source := TileSetAtlasSource.new()
     tileset_source_id = tileset.add_source(source)
 
-    var image := Image.create(tile_size * 2, tile_size, false, Image.FORMAT_RGBA8)
-    image.fill(Color(0.2, 0.6, 0.2))
+    var image := Image.create(tile_size * 3, tile_size, false, Image.FORMAT_RGBA8)
+    image.fill_rect(Rect2i(0, 0, tile_size, tile_size), Color(0.2, 0.6, 0.2))
     image.fill_rect(Rect2i(tile_size, 0, tile_size, tile_size), Color(0.2, 0.4, 0.8))
+    image.fill_rect(Rect2i(tile_size * 2, 0, tile_size, tile_size), Color(0.75, 0.25, 0.15))
 
     var texture := ImageTexture.create_from_image(image)
     source.texture = texture
     source.texture_region_size = Vector2i(tile_size, tile_size)
-    source.create_tile(Vector2i(0, 0))
-    source.create_tile(Vector2i(1, 0))
+    source.create_tile(TILE_GRASS)
+    source.create_tile(TILE_WATER)
+    source.create_tile(TILE_HAZARD)
 
     tile_map.tile_set = tileset
 
@@ -236,11 +250,62 @@ func _generate_chunk(chunk: Vector2i) -> void:
     var start := chunk * chunk_size
     for x in range(start.x, start.x + chunk_size):
         for y in range(start.y, start.y + chunk_size):
-            var value := noise.get_noise_2d(float(x), float(y))
-            var atlas := Vector2i(0, 0)
-            if value < -0.1:
-                atlas = Vector2i(1, 0)
-            tile_map.set_cell(0, Vector2i(x, y), tileset_source_id, atlas)
+            tile_map.set_cell(0, Vector2i(x, y), tileset_source_id, _select_atlas_for_tile(x, y))
+
+
+func _select_atlas_for_tile(x: int, y: int) -> Vector2i:
+    var value := noise.get_noise_2d(float(x), float(y))
+    if value < -0.1:
+        return TILE_WATER
+
+    if _hazards_active and value > 0.42 and value < 0.56:
+        return TILE_HAZARD
+
+    return TILE_GRASS
+
+func _update_environment_escalation(delta: float) -> void:
+    if not _hazards_active and _survival_time >= escalation_start_time:
+        _hazards_active = true
+        _refresh_nearby_chunk_hazards()
+
+    _apply_ground_hazard_damage(delta)
+
+func _refresh_nearby_chunk_hazards() -> void:
+    var player_tile := Vector2i(
+        floor(player.global_position.x / tile_size),
+        floor(player.global_position.y / tile_size)
+    )
+    var player_chunk := Vector2i(
+        floor(float(player_tile.x) / chunk_size),
+        floor(float(player_tile.y) / chunk_size)
+    )
+
+    for x in range(player_chunk.x - view_distance - 1, player_chunk.x + view_distance + 2):
+        for y in range(player_chunk.y - view_distance - 1, player_chunk.y + view_distance + 2):
+            var start := Vector2i(x, y) * chunk_size
+            for tx in range(start.x, start.x + chunk_size):
+                for ty in range(start.y, start.y + chunk_size):
+                    tile_map.set_cell(0, Vector2i(tx, ty), tileset_source_id, _select_atlas_for_tile(tx, ty))
+
+func _apply_ground_hazard_damage(delta: float) -> void:
+    if not _hazards_active:
+        return
+
+    _hazard_damage_timer = max(_hazard_damage_timer - delta, 0.0)
+    if _hazard_damage_timer > 0.0:
+        return
+
+    var player_tile := Vector2i(
+        floor(player.global_position.x / tile_size),
+        floor(player.global_position.y / tile_size)
+    )
+    var tile_data := tile_map.get_cell_atlas_coords(0, player_tile)
+    if tile_data != TILE_HAZARD:
+        return
+
+    if player.has_method("take_damage"):
+        player.take_damage(hazard_damage)
+        _hazard_damage_timer = hazard_damage_interval
 
 func _update_enemy_spawns(delta: float) -> void:
     _enemy_spawn_timer -= delta
@@ -269,9 +334,16 @@ func _spawn_enemy() -> void:
     add_child(enemy)
 
 func _configure_enemy_difficulty(enemy: CharacterBody2D) -> void:
-    var should_spawn_hard_enemy := _survival_time >= hard_enemy_unlock_time and randf() < hard_enemy_spawn_chance
-    if should_spawn_hard_enemy and enemy.has_method("setup_stats"):
+    var is_hard_enemy := _survival_time >= hard_enemy_unlock_time and randf() < hard_enemy_spawn_chance
+    if is_hard_enemy and enemy.has_method("setup_stats"):
         enemy.setup_stats(120.0, 6, 2, Color(0.6, 0.1, 0.9), 18)
+
+    var should_spawn_shielded_enemy := _survival_time >= escalation_start_time and randf() < shield_enemy_spawn_chance
+    if should_spawn_shielded_enemy and enemy.has_method("setup_stats"):
+        if is_hard_enemy:
+            enemy.setup_stats(132.0, 8, 2, Color(0.45, 0.75, 1.0), 18, shield_enemy_amount)
+        else:
+            enemy.setup_stats(92.0, 4, 1, Color(0.45, 0.75, 1.0), 15, shield_enemy_amount)
 
 func _on_enemy_died() -> void:
     if _game_over:
