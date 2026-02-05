@@ -98,6 +98,12 @@ func take_damage(amount: int) -> void:
         died.emit()
         queue_free()
 
+func multiply_health(multiplier: int) -> void:
+    var safe_multiplier := maxi(multiplier, 1)
+    max_health *= safe_multiplier
+    _health *= safe_multiplier
+    queue_redraw()
+
 func _draw() -> void:
     if max_health <= 0:
         return
