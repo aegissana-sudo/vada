@@ -8,9 +8,13 @@ signal died
 @export var contact_damage_interval := 0.6
 @export var health_bar_size := Vector2(18.0, 3.0)
 @export var health_bar_offset := Vector2(-9.0, -14.0)
+@export var shield_bar_size := Vector2(18.0, 2.0)
+@export var shield_bar_offset := Vector2(-9.0, -18.0)
 
 var target: Node2D
 var _health := max_health
+var _max_shield := 0
+var _shield := 0
 var _contact_timer := 0.0
 var _body_color := Color(0.9, 0.2, 0.2)
 var _body_size := 14
@@ -24,17 +28,24 @@ func _ready() -> void:
     _apply_visual_style()
     queue_redraw()
 
-func setup_stats(new_speed: float, new_max_health: int, new_contact_damage: int, color: Color, body_size: int = 14) -> void:
+func setup_stats(new_speed: float, new_max_health: int, new_contact_damage: int, color: Color, body_size: int = 14, shield_amount: int = 0) -> void:
     speed = new_speed
     max_health = new_max_health
     contact_damage = new_contact_damage
     _health = max_health
     _body_color = color
     _body_size = max(body_size, 8)
+    _max_shield = max(shield_amount, 0)
+    _shield = _max_shield
 
     if is_node_ready():
         _apply_visual_style()
         queue_redraw()
+
+func set_shield(shield_amount: int) -> void:
+    _max_shield = max(shield_amount, 0)
+    _shield = _max_shield
+    queue_redraw()
 
 func _physics_process(delta: float) -> void:
     _contact_timer = max(_contact_timer - delta, 0.0)
@@ -63,7 +74,15 @@ func _apply_contact_damage() -> void:
             return
 
 func take_damage(amount: int) -> void:
-    _health -= amount
+    var remaining_damage := amount
+    if _shield > 0:
+        var absorbed := mini(_shield, remaining_damage)
+        _shield -= absorbed
+        remaining_damage -= absorbed
+
+    if remaining_damage > 0:
+        _health -= remaining_damage
+
     queue_redraw()
     if _health <= 0:
         died.emit()
@@ -81,6 +100,18 @@ func _draw() -> void:
     )
     draw_rect(background_rect, Color(0.1, 0.1, 0.1, 0.8))
     draw_rect(foreground_rect, Color(0.2, 0.9, 0.2, 0.9))
+
+    if _max_shield <= 0:
+        return
+
+    var shield_ratio: float = clamp(float(_shield) / float(_max_shield), 0.0, 1.0)
+    var shield_background := Rect2(shield_bar_offset, shield_bar_size)
+    var shield_foreground := Rect2(
+        shield_bar_offset,
+        Vector2(shield_bar_size.x * shield_ratio, shield_bar_size.y)
+    )
+    draw_rect(shield_background, Color(0.05, 0.08, 0.2, 0.85))
+    draw_rect(shield_foreground, Color(0.35, 0.75, 1.0, 0.95))
 
 func _ensure_sprite() -> Sprite2D:
     if has_node("Sprite2D"):
@@ -109,6 +140,8 @@ func _apply_visual_style() -> void:
 
     health_bar_size = Vector2(max(float(_body_size) + 4.0, 18.0), 3.0)
     health_bar_offset = Vector2(-health_bar_size.x * 0.5, -float(_body_size) * 0.8)
+    shield_bar_size = Vector2(health_bar_size.x, 2.0)
+    shield_bar_offset = health_bar_offset + Vector2(0.0, -4.0)
 
 func _ensure_collision() -> CollisionShape2D:
     if has_node("CollisionShape2D"):
