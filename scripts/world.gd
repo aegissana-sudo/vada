@@ -216,14 +216,14 @@ func _on_exit_button_pressed() -> void:
 
 func _update_inventory_ui() -> void:
     if bool(player.call("has_shotgun")):
-        shotgun_slot_label.text = "ДРБ"
+        shotgun_slot_label.text = "2: ДРБ"
     else:
-        shotgun_slot_label.text = "1"
+        shotgun_slot_label.text = "2"
 
     if bool(player.call("has_magic_staff")):
-        staff_slot_label.text = "ПСХ"
+        staff_slot_label.text = "3: ПСХ"
     else:
-        staff_slot_label.text = "2"
+        staff_slot_label.text = "3"
 
 func _spawn_shotgun_pickup() -> void:
     _shotgun_pickup = Area2D.new()
