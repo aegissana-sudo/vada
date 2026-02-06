@@ -204,8 +204,8 @@ func _create_monster_texture() -> ImageTexture:
     _paint_circle(image, Vector2(right_eye_x, eye_y), max(size * 0.045, 1.0), eye_core)
 
     var horn_color := _body_color.lightened(0.22)
-    var horn_height := max(size * 0.12, 1.0)
-    var horn_width := max(size * 0.1, 1.0)
+    var horn_height: float = maxf(size * 0.12, 1.0)
+    var horn_width: float = maxf(size * 0.1, 1.0)
     _paint_triangle(
         image,
         Vector2(center.x - size * 0.18, center.y - radius * 0.72),
