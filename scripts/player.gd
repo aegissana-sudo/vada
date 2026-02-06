@@ -15,11 +15,11 @@ signal died
 @export var shotgun_bullet_speed := 350.0
 @export var shotgun_bullet_damage := 1
 @export var shotgun_damage_bonus_per_upgrade := 1
-@export var staff_beam_count := 6
+@export var staff_beam_count := 1
 @export var staff_spread_degrees := 24.0
 @export var staff_shoot_interval := 0.7
 @export var staff_beam_length := 280.0
-@export var staff_beam_damage := 2
+@export var staff_beam_damage := 3
 @export var staff_damage_bonus_per_upgrade := 1
 
 @onready var sprite: Sprite2D = $Sprite2D
@@ -55,6 +55,10 @@ func apply_weapon_upgrade(upgrade_id: String) -> void:
             staff_shoot_interval = max(staff_shoot_interval - 0.07, 0.2)
         "staff_damage":
             staff_beam_damage += staff_damage_bonus_per_upgrade
+        "staff_beam_length":
+            staff_beam_length += 40.0
+        "staff_focus":
+            staff_spread_degrees = max(staff_spread_degrees - 3.0, 0.0)
 
 func _ready() -> void:
     add_to_group("player")
