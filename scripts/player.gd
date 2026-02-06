@@ -15,6 +15,12 @@ signal died
 @export var shotgun_bullet_speed := 350.0
 @export var shotgun_bullet_damage := 1
 @export var shotgun_damage_bonus_per_upgrade := 1
+@export var staff_beam_count := 6
+@export var staff_spread_degrees := 24.0
+@export var staff_shoot_interval := 0.7
+@export var staff_beam_length := 280.0
+@export var staff_beam_damage := 1
+@export var staff_damage_bonus_per_upgrade := 1
 
 @onready var sprite: Sprite2D = $Sprite2D
 
@@ -22,6 +28,7 @@ var _shoot_timer := 0.0
 var _bullet_script := preload("res://scripts/bullet.gd")
 var _health := max_health
 var _has_shotgun := false
+var _has_magic_staff := false
 
 func apply_weapon_upgrade(upgrade_id: String) -> void:
     match upgrade_id:
@@ -37,6 +44,12 @@ func apply_weapon_upgrade(upgrade_id: String) -> void:
             shotgun_shoot_interval = max(shotgun_shoot_interval - 0.07, 0.2)
         "shotgun_damage":
             shotgun_bullet_damage += shotgun_damage_bonus_per_upgrade
+        "staff_beams":
+            staff_beam_count += 1
+        "staff_rate":
+            staff_shoot_interval = max(staff_shoot_interval - 0.07, 0.2)
+        "staff_damage":
+            staff_beam_damage += staff_damage_bonus_per_upgrade
 
 func _ready() -> void:
     add_to_group("player")
@@ -91,6 +104,10 @@ func _shoot_at(target: Node2D) -> void:
     if direction.length() == 0.0:
         return
 
+    if _has_magic_staff:
+        _shoot_lightning_staff(direction.normalized())
+        return
+
     if _has_shotgun:
         _shoot_shotgun(direction.normalized())
         return
@@ -100,13 +117,66 @@ func _shoot_at(target: Node2D) -> void:
 func equip_shotgun() -> void:
     _has_shotgun = true
 
+func equip_magic_staff() -> void:
+    _has_magic_staff = true
+
 func has_shotgun() -> bool:
     return _has_shotgun
 
+func has_magic_staff() -> bool:
+    return _has_magic_staff
+
 func _get_shoot_interval() -> float:
+    if _has_magic_staff:
+        return staff_shoot_interval
+
     if _has_shotgun:
         return shotgun_shoot_interval
     return shoot_interval
+
+func _shoot_lightning_staff(base_direction: Vector2) -> void:
+    var beam_count := maxi(staff_beam_count, 1)
+    if beam_count == 1:
+        _fire_lightning_beam(base_direction)
+        return
+
+    var spread_radians := deg_to_rad(staff_spread_degrees)
+    for index in range(beam_count):
+        var ratio := float(index) / float(beam_count - 1)
+        var angle_offset: float = lerpf(-spread_radians * 0.5, spread_radians * 0.5, ratio)
+        var beam_direction := base_direction.rotated(angle_offset).normalized()
+        _fire_lightning_beam(beam_direction)
+
+func _fire_lightning_beam(direction: Vector2) -> void:
+    var space_state := get_world_2d().direct_space_state
+    var query := PhysicsRayQueryParameters2D.create(
+        global_position,
+        global_position + direction * staff_beam_length
+    )
+    query.exclude = [self]
+    query.collide_with_areas = false
+    query.collide_with_bodies = true
+    var hit := space_state.intersect_ray(query)
+    var end_point := global_position + direction * staff_beam_length
+
+    if not hit.is_empty():
+        end_point = hit.position
+        var collider := hit.collider
+        if collider != null and collider.is_in_group("enemies") and collider.has_method("take_damage"):
+            collider.take_damage(staff_beam_damage)
+
+    var beam := Line2D.new()
+    beam.width = 2.5
+    beam.default_color = Color(0.45, 0.85, 1.0, 0.95)
+    beam.add_point(global_position)
+    beam.add_point(end_point)
+    get_parent().add_child(beam)
+
+    var timer := get_tree().create_timer(0.06)
+    timer.timeout.connect(func() -> void:
+        if is_instance_valid(beam):
+            beam.queue_free()
+    )
 
 func _shoot_shotgun(base_direction: Vector2) -> void:
     var pellet_count := maxi(shotgun_pellet_count, 1)
