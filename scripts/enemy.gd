@@ -181,11 +181,11 @@ func _create_monster_texture() -> ImageTexture:
 
             var edge_alpha: float = clampf((radius - distance) / edge_softness, 0.0, 1.0)
             var normal: Vector2 = local / maxf(distance, 0.0001)
-            var light_mix := clamp((normal.dot(highlight_dir) + 1.0) * 0.5, 0.0, 1.0)
+            var light_mix: float = clampf((normal.dot(highlight_dir) + 1.0) * 0.5, 0.0, 1.0)
             var base_color := shadow.lerp(base, 0.45 + 0.45 * light_mix)
             base_color = base_color.lerp(highlight, pow(light_mix, 1.6) * 0.6)
 
-            var inner_glow := clamp((radius * 0.35 - distance) / (radius * 0.35), 0.0, 1.0)
+            var inner_glow: float = clampf((radius * 0.35 - distance) / (radius * 0.35), 0.0, 1.0)
             if inner_glow > 0.0:
                 base_color = base_color.lightened(inner_glow * 0.08)
 
