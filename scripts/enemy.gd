@@ -164,7 +164,7 @@ func _create_monster_texture() -> ImageTexture:
 
     var center := Vector2((size - 1) * 0.5, (size - 1) * 0.5)
     var radius := size * 0.42
-    var edge_softness := max(radius * 0.18, 1.0)
+    var edge_softness: float = maxf(radius * 0.18, 1.0)
     var highlight_dir := Vector2(-0.55, -0.8).normalized()
 
     var shadow := _body_color.darkened(0.38)
