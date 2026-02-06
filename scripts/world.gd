@@ -320,9 +320,9 @@ func _find_closest_pickup() -> Dictionary:
         return {}
 
     var closest: Dictionary = candidates[0]
-    var best_distance := (closest["node"].global_position - player.global_position).length()
+    var best_distance: float = (closest["node"].global_position - player.global_position).length()
     for candidate in candidates:
-        var candidate_distance := (candidate["node"].global_position - player.global_position).length()
+        var candidate_distance: float = (candidate["node"].global_position - player.global_position).length()
         if candidate_distance < best_distance:
             best_distance = candidate_distance
             closest = candidate
