@@ -19,7 +19,7 @@ signal died
 @export var staff_spread_degrees := 24.0
 @export var staff_shoot_interval := 0.7
 @export var staff_beam_length := 280.0
-@export var staff_beam_damage := 1
+@export var staff_beam_damage := 2
 @export var staff_damage_bonus_per_upgrade := 1
 
 @onready var sprite: Sprite2D = $Sprite2D
@@ -29,6 +29,11 @@ var _bullet_script := preload("res://scripts/bullet.gd")
 var _health := max_health
 var _has_shotgun := false
 var _has_magic_staff := false
+var _selected_weapon_slot := 1
+
+const WEAPON_SLOT_PISTOL := 1
+const WEAPON_SLOT_SHOTGUN := 2
+const WEAPON_SLOT_STAFF := 3
 
 func apply_weapon_upgrade(upgrade_id: String) -> void:
     match upgrade_id:
@@ -72,6 +77,8 @@ func _physics_process(_delta: float) -> void:
     move_and_slide()
 
 func _process(delta: float) -> void:
+    _handle_weapon_slot_input()
+
     _shoot_timer -= delta
     if _shoot_timer > 0.0:
         return
@@ -104,11 +111,11 @@ func _shoot_at(target: Node2D) -> void:
     if direction.length() == 0.0:
         return
 
-    if _has_magic_staff:
+    if _selected_weapon_slot == WEAPON_SLOT_STAFF and _has_magic_staff:
         _shoot_lightning_staff(direction.normalized())
         return
 
-    if _has_shotgun:
+    if _selected_weapon_slot == WEAPON_SLOT_SHOTGUN and _has_shotgun:
         _shoot_shotgun(direction.normalized())
         return
 
@@ -116,9 +123,12 @@ func _shoot_at(target: Node2D) -> void:
 
 func equip_shotgun() -> void:
     _has_shotgun = true
+    if _selected_weapon_slot != WEAPON_SLOT_STAFF:
+        _selected_weapon_slot = WEAPON_SLOT_SHOTGUN
 
 func equip_magic_staff() -> void:
     _has_magic_staff = true
+    _selected_weapon_slot = WEAPON_SLOT_STAFF
 
 func has_shotgun() -> bool:
     return _has_shotgun
@@ -127,12 +137,33 @@ func has_magic_staff() -> bool:
     return _has_magic_staff
 
 func _get_shoot_interval() -> float:
-    if _has_magic_staff:
+    if _selected_weapon_slot == WEAPON_SLOT_STAFF and _has_magic_staff:
         return staff_shoot_interval
 
-    if _has_shotgun:
+    if _selected_weapon_slot == WEAPON_SLOT_SHOTGUN and _has_shotgun:
         return shotgun_shoot_interval
     return shoot_interval
+
+func _handle_weapon_slot_input() -> void:
+    if Input.is_key_pressed(KEY_1) or Input.is_key_pressed(KEY_KP_1):
+        _selected_weapon_slot = WEAPON_SLOT_PISTOL
+        return
+
+    if Input.is_key_pressed(KEY_2) or Input.is_key_pressed(KEY_KP_2):
+        if _has_shotgun:
+            _selected_weapon_slot = WEAPON_SLOT_SHOTGUN
+        return
+
+    if Input.is_key_pressed(KEY_3) or Input.is_key_pressed(KEY_KP_3):
+        if _has_magic_staff:
+            _selected_weapon_slot = WEAPON_SLOT_STAFF
+        return
+
+    if Input.is_key_pressed(KEY_4) or Input.is_key_pressed(KEY_KP_4):
+        return
+
+    if Input.is_key_pressed(KEY_5) or Input.is_key_pressed(KEY_KP_5):
+        return
 
 func _shoot_lightning_staff(base_direction: Vector2) -> void:
     var beam_count := maxi(staff_beam_count, 1)
