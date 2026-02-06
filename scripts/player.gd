@@ -179,7 +179,7 @@ func _shoot_lightning_staff(base_direction: Vector2) -> void:
         _fire_lightning_beam(beam_direction)
 
 func _fire_lightning_beam(direction: Vector2) -> void:
-    var space_state := get_world_2d().direct_space_state
+    var space_state: PhysicsDirectSpaceState2D = get_world_2d().direct_space_state
     var query := PhysicsRayQueryParameters2D.create(
         global_position,
         global_position + direction * staff_beam_length
