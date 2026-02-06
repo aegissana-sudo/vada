@@ -29,6 +29,7 @@ extends Node2D
 @onready var start_button: Button = $CanvasLayer/MainMenu/CenterContainer/VBoxContainer/StartButton
 @onready var exit_button: Button = $CanvasLayer/MainMenu/CenterContainer/VBoxContainer/ExitButton
 @onready var shotgun_slot_label: Label = $CanvasLayer/InventoryUI/SlotsContainer/Slot1/Label
+@onready var staff_slot_label: Label = $CanvasLayer/InventoryUI/SlotsContainer/Slot2/Label
 @onready var pause_button: Button = $CanvasLayer/PauseButton
 @onready var level_up_menu: Control = $CanvasLayer/LevelUpMenu
 @onready var level_up_title_label: Label = $CanvasLayer/LevelUpMenu/CenterContainer/VBoxContainer/TitleLabel
@@ -43,6 +44,7 @@ var tileset_source_id := -1
 var _enemy_spawn_timer := 0.0
 var _enemy_script := preload("res://scripts/enemy.gd")
 var _shotgun_pickup_script := preload("res://scripts/shotgun_pickup.gd")
+var _staff_pickup_script := preload("res://scripts/magic_staff_pickup.gd")
 var _game_over := false
 var _survival_time := 0.0
 var _kill_count := 0
@@ -58,10 +60,14 @@ var _hazard_damage_timer := 0.0
 var _enemy_health_multiplier := 1
 var _next_enemy_health_doubling_time := 0.0
 var _shotgun_pickup: Area2D
+var _magic_staff_pickup: Area2D
 
 const SHOTGUN_PICKUP_MIN_DISTANCE := 420.0
 const SHOTGUN_PICKUP_MAX_DISTANCE := 1150.0
 const SHOTGUN_PICKUP_SPAWN_ATTEMPTS := 24
+const STAFF_PICKUP_MIN_DISTANCE := 520.0
+const STAFF_PICKUP_MAX_DISTANCE := 1300.0
+const STAFF_PICKUP_SPAWN_ATTEMPTS := 24
 
 const TILE_GRASS := Vector2i(0, 0)
 const TILE_WATER := Vector2i(1, 0)
@@ -97,6 +103,21 @@ const UPGRADE_POOL := [
         "id": "shotgun_damage",
         "title": "Дробовик: урон дроби",
         "description": "Каждая дробина наносит больше урона."
+    },
+    {
+        "id": "staff_beams",
+        "title": "Посох: +1 луч",
+        "description": "Магический посох выпускает больше лучей молнии за выстрел."
+    },
+    {
+        "id": "staff_rate",
+        "title": "Посох: темп огня",
+        "description": "Магический посох стреляет чаще."
+    },
+    {
+        "id": "staff_damage",
+        "title": "Посох: урон молнии",
+        "description": "Каждый луч молнии наносит больше урона."
     }
 ]
 
@@ -115,6 +136,7 @@ func _ready() -> void:
     _update_level_ui()
     _update_inventory_ui()
     _spawn_shotgun_pickup()
+    _spawn_staff_pickup()
     _update_chest_indicator_ui()
     player.died.connect(_on_player_died)
     retry_button.pressed.connect(_on_retry_button_pressed)
@@ -162,7 +184,7 @@ func _set_gameplay_active(is_active: bool) -> void:
     pause_button.text = "Пауза (Esc)"
     level_label.visible = is_active
     level_up_menu.visible = false
-    chest_indicator_label.visible = is_active and _shotgun_pickup != null
+    chest_indicator_label.visible = is_active and (_shotgun_pickup != null or _magic_staff_pickup != null)
 
     if is_active:
         _enemy_health_multiplier = 1
@@ -195,9 +217,13 @@ func _on_exit_button_pressed() -> void:
 func _update_inventory_ui() -> void:
     if bool(player.call("has_shotgun")):
         shotgun_slot_label.text = "ДРБ"
-        return
+    else:
+        shotgun_slot_label.text = "1"
 
-    shotgun_slot_label.text = "1"
+    if bool(player.call("has_magic_staff")):
+        staff_slot_label.text = "ПСХ"
+    else:
+        staff_slot_label.text = "2"
 
 func _spawn_shotgun_pickup() -> void:
     _shotgun_pickup = Area2D.new()
@@ -209,6 +235,19 @@ func _spawn_shotgun_pickup() -> void:
 
 func _on_shotgun_picked_up() -> void:
     _shotgun_pickup = null
+    _update_inventory_ui()
+    _update_chest_indicator_ui()
+
+func _spawn_staff_pickup() -> void:
+    _magic_staff_pickup = Area2D.new()
+    _magic_staff_pickup.set_script(_staff_pickup_script)
+    _magic_staff_pickup.process_mode = Node.PROCESS_MODE_PAUSABLE
+    _magic_staff_pickup.global_position = _pick_random_staff_position()
+    _magic_staff_pickup.picked_up.connect(_on_staff_picked_up)
+    add_child(_magic_staff_pickup)
+
+func _on_staff_picked_up() -> void:
+    _magic_staff_pickup = null
     _update_inventory_ui()
     _update_chest_indicator_ui()
 
@@ -234,16 +273,61 @@ func _pick_random_shotgun_position() -> Vector2:
 
     return player.global_position + Vector2(SHOTGUN_PICKUP_MIN_DISTANCE, 0.0)
 
+func _pick_random_staff_position() -> Vector2:
+    for _attempt in range(STAFF_PICKUP_SPAWN_ATTEMPTS):
+        var angle := randf() * TAU
+        var distance := randf_range(STAFF_PICKUP_MIN_DISTANCE, STAFF_PICKUP_MAX_DISTANCE)
+        var offset := Vector2(cos(angle), sin(angle)) * distance
+        var world_position := player.global_position + offset
+        var tile_position := Vector2i(
+            floor(world_position.x / tile_size),
+            floor(world_position.y / tile_size)
+        )
+        var chunk := Vector2i(
+            floor(float(tile_position.x) / chunk_size),
+            floor(float(tile_position.y) / chunk_size)
+        )
+        if not generated_chunks.has(chunk):
+            _generate_chunk(chunk)
+
+        if _select_atlas_for_tile(tile_position.x, tile_position.y) == TILE_GRASS:
+            return world_position
+
+    return player.global_position + Vector2(STAFF_PICKUP_MIN_DISTANCE, 0.0)
+
 func _update_chest_indicator_ui() -> void:
-    if _shotgun_pickup == null:
+    var closest_pickup := _find_closest_pickup()
+    if closest_pickup.is_empty():
         chest_indicator_label.visible = false
         return
 
-    var to_chest := _shotgun_pickup.global_position - player.global_position
+    var pickup_node: Area2D = closest_pickup["node"]
+    var pickup_title: String = closest_pickup["title"]
+    var to_chest := pickup_node.global_position - player.global_position
     var distance := int(to_chest.length())
     var direction_arrow := _get_direction_arrow(to_chest)
-    chest_indicator_label.text = "Сундук с дробовиком: %s %d" % [direction_arrow, distance]
+    chest_indicator_label.text = "%s: %s %d" % [pickup_title, direction_arrow, distance]
     chest_indicator_label.visible = _game_started and not _game_over
+
+func _find_closest_pickup() -> Dictionary:
+    var candidates: Array = []
+    if _shotgun_pickup != null:
+        candidates.append({"node": _shotgun_pickup, "title": "Сундук с дробовиком"})
+    if _magic_staff_pickup != null:
+        candidates.append({"node": _magic_staff_pickup, "title": "Сундук с посохом"})
+
+    if candidates.is_empty():
+        return {}
+
+    var closest := candidates[0]
+    var best_distance := (closest["node"].global_position - player.global_position).length()
+    for candidate in candidates:
+        var candidate_distance := (candidate["node"].global_position - player.global_position).length()
+        if candidate_distance < best_distance:
+            best_distance = candidate_distance
+            closest = candidate
+
+    return closest
 
 func _get_direction_arrow(direction: Vector2) -> String:
     if direction.length() <= 0.001:
