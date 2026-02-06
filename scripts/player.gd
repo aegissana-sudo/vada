@@ -180,14 +180,14 @@ func _shoot_lightning_staff(base_direction: Vector2) -> void:
 
 func _fire_lightning_beam(direction: Vector2) -> void:
     var space_state: PhysicsDirectSpaceState2D = get_world_2d().direct_space_state
-    var query := PhysicsRayQueryParameters2D.create(
+    var query: PhysicsRayQueryParameters2D = PhysicsRayQueryParameters2D.create(
         global_position,
         global_position + direction * staff_beam_length
     )
     query.exclude = [self]
     query.collide_with_areas = false
     query.collide_with_bodies = true
-    var hit := space_state.intersect_ray(query)
+    var hit: Dictionary = space_state.intersect_ray(query)
     var end_point := global_position + direction * staff_beam_length
 
     if not hit.is_empty():
@@ -196,14 +196,14 @@ func _fire_lightning_beam(direction: Vector2) -> void:
         if collider != null and collider.is_in_group("enemies") and collider.has_method("take_damage"):
             collider.take_damage(staff_beam_damage)
 
-    var beam := Line2D.new()
+    var beam: Line2D = Line2D.new()
     beam.width = 2.5
     beam.default_color = Color(0.45, 0.85, 1.0, 0.95)
     beam.add_point(global_position)
     beam.add_point(end_point)
     get_parent().add_child(beam)
 
-    var timer := get_tree().create_timer(0.06)
+    var timer: SceneTreeTimer = get_tree().create_timer(0.06)
     timer.timeout.connect(func() -> void:
         if is_instance_valid(beam):
             beam.queue_free()
