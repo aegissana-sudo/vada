@@ -161,7 +161,7 @@ func _fire_lightning_beam(direction: Vector2) -> void:
 
     if not hit.is_empty():
         end_point = hit.position
-        var collider := hit.collider
+        var collider: Node = hit.collider as Node
         if collider != null and collider.is_in_group("enemies") and collider.has_method("take_damage"):
             collider.take_damage(staff_beam_damage)
 
